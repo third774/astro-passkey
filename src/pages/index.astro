@@ -1,0 +1,42 @@
+---
+import { db, eq } from "astro:db";
+import { Sessions, Users } from "../../db/config";
+
+const sessionIdCookie = Astro.cookies.get("session");
+const sessionId = sessionIdCookie?.value;
+
+const [session] = sessionId
+  ? await db.select().from(Sessions).where(eq(Sessions.id, sessionId))
+  : [];
+
+const [loggedInUser] = session?.userId
+  ? await db.select().from(Users).where(eq(Users.id, session.userId))
+  : [];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Astro</title>
+  </head>
+  <body>
+    <nav>
+      {
+        loggedInUser ? (
+          <a href="/logout">log out</a>
+        ) : (
+          <>
+            <a href="/sign-up">sign up</a>
+            <a href="/login">log in</a>
+          </>
+        )
+      }
+    </nav>
+
+    <h1>Astro</h1>
+    {loggedInUser && <p>Logged in as {loggedInUser.username}</p>}
+  </body>
+</html>
