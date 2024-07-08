@@ -7,11 +7,6 @@ import {
 import { ActionError, defineAction, z } from "astro:actions";
 import { and, db, eq, isNotNull, Sessions, Users } from "astro:db";
 
-// TODO: Don't hard code?
-const rpID = "localhost";
-const rpName = "Demo App";
-const expectedOrigin = "http://localhost:4321";
-
 export const server = {
   registerOptions: defineAction({
     accept: "json",
@@ -21,8 +16,8 @@ export const server = {
     handler: async ({ username }, context) => {
       const options = await generateRegistrationOptions({
         // "rp" stands for Relying Party, which is the server
-        rpName,
-        rpID,
+        rpName: context.site?.toString() ?? "My App",
+        rpID: context.url.hostname,
         userID: new Uint8Array(Buffer.from(username)),
         userName: username,
         attestationType: "indirect",
@@ -88,11 +83,13 @@ export const server = {
 
       const expectedChallenge = existingChallenge.challenge;
 
+      console.log(context);
+
       const verification = await verifyRegistrationResponse({
         response: attestationResponse,
         expectedChallenge,
-        expectedOrigin,
-        expectedRPID: "localhost",
+        expectedOrigin: context.url.origin,
+        expectedRPID: context.url.hostname,
       });
       if (!verification.verified || !verification.registrationInfo)
         throw new ActionError({
@@ -107,11 +104,29 @@ export const server = {
         publicKey: Buffer.from(credentialPublicKey).toString("base64"),
       };
 
-      await db.insert(Users).values({
+      const user = {
         username,
         id: crypto.randomUUID(),
         credentialPublicKey: credential.publicKey,
         credentialID: credential.id,
+      };
+
+      await db.insert(Users).values(user);
+
+      const session = {
+        id: crypto.randomUUID(),
+        userId: user.id,
+      };
+
+      await db.insert(Sessions).values(session);
+
+      context.cookies.delete("session");
+      context.cookies.set("session", session.id, {
+        httpOnly: true,
+        secure: import.meta.env.PROD,
+        // domain: context.url.origin,
+        sameSite: "strict",
+        path: "/",
       });
 
       return {
@@ -126,6 +141,8 @@ export const server = {
       username: z.string(),
     }),
     handler: async ({ username }, context) => {
+      console.log(context);
+
       const [existingUser] = await db
         .select()
         .from(Users)
@@ -139,7 +156,7 @@ export const server = {
       }
 
       const options = await generateAuthenticationOptions({
-        rpID,
+        rpID: context.url.hostname,
         userVerification: "required",
         allowCredentials: [
           {
@@ -234,8 +251,8 @@ export const server = {
       const verification = await verifyAuthenticationResponse({
         response: assertionResponse,
         expectedChallenge,
-        expectedOrigin,
-        expectedRPID: rpID,
+        expectedOrigin: context.url.origin,
+        expectedRPID: context.url.hostname,
         authenticator: {
           credentialPublicKey,
           credentialID,
