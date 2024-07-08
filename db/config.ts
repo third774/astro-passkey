@@ -1,7 +1,6 @@
-import { asDrizzleTable } from "@astrojs/db/utils";
 import { defineDb, defineTable, column } from "astro:db";
 
-const UsersTable = defineTable({
+export const Users = defineTable({
   columns: {
     username: column.text(),
     id: column.text({ primaryKey: true }),
@@ -10,21 +9,18 @@ const UsersTable = defineTable({
   },
 });
 
-const SessionsTable = defineTable({
+export const Sessions = defineTable({
   columns: {
     id: column.text({ primaryKey: true }),
     challenge: column.text({ optional: true }),
     userId: column.text({
       optional: true,
-      references: () => UsersTable.columns.id,
+      references: () => Users.columns.id,
     }),
   },
 });
 
 // https://astro.build/db/config
 export default defineDb({
-  tables: { Sessions: SessionsTable, Users: UsersTable },
+  tables: { Sessions, Users },
 });
-
-export const Sessions = asDrizzleTable("Sessions", SessionsTable);
-export const Users = asDrizzleTable("Users", UsersTable);

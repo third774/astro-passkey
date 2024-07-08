@@ -1,6 +1,5 @@
 ---
-import { db, eq } from "astro:db";
-import { Sessions, Users } from "../../db/config";
+import { db, eq, Sessions, Users } from "astro:db";
 
 const sessionIdCookie = Astro.cookies.get("session");
 const sessionId = sessionIdCookie?.value;

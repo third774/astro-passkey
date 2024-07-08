@@ -5,8 +5,7 @@ import {
   verifyRegistrationResponse,
 } from "@simplewebauthn/server";
 import { ActionError, defineAction, z } from "astro:actions";
-import { and, db, eq, isNotNull } from "astro:db";
-import { Sessions, Users } from "../../db/config";
+import { and, db, eq, isNotNull, Sessions, Users } from "astro:db";
 
 // TODO: Don't hard code?
 const rpID = "localhost";
